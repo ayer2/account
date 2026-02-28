@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, Button, Divider, message, Modal, Upload, Space, Typography, Popconfirm, InputNumber, Switch, Slider, Row, Col } from 'antd'
-import { DownloadOutlined, UploadOutlined, DeleteOutlined, InfoCircleOutlined, DollarOutlined, LoadingOutlined } from '@ant-design/icons'
+import { DownloadOutlined, UploadOutlined, DeleteOutlined, SettingOutlined, DollarOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import type { UploadProps } from 'antd'
 import * as XLSX from 'xlsx'
 import { useDataStore } from '../stores/dataStore'
 import { getDB } from '../db'
-import { accountRepository } from '../db/repositories/account'
 import { api } from '../services/api'
 
 const { Text, Paragraph } = Typography
@@ -26,6 +25,50 @@ const Settings: React.FC = () => {
   const [budgetLoading, setBudgetLoading] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+  
+  // 原生权限状态
+  const [notificationGranted, setNotificationGranted] = useState<boolean | null>(null)
+
+  // 检查原生通知权限
+  useEffect(() => {
+    const checkNotificationPermission = async () => {
+      try {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+          const { NotificationSettings } = window.Capacitor.Plugins
+          if (NotificationSettings) {
+            const result = await NotificationSettings.checkPermission()
+            setNotificationGranted(result.granted)
+          }
+        }
+      } catch (e) {
+        console.error('检查通知权限失败', e)
+      }
+    }
+    checkNotificationPermission()
+  }, [])
+
+  // 跳转到系统设置页
+  const handleOpenNotificationSettings = async () => {
+    try {
+      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        const { NotificationSettings } = window.Capacitor.Plugins
+        if (NotificationSettings) {
+          await NotificationSettings.openSettings()
+          // 可以在这里提示用户开启后返回
+          Modal.info({
+            title: '授权引导',
+            content: '请在弹出的系统设置页面中，找到【个人记账助手】，并打开开关允许读取通知。授权后返回App即可生效。',
+            okText: '好的'
+          })
+        }
+      } else {
+        message.warning('该功能仅在移动端 App 中可用')
+      }
+    } catch (e) {
+      console.error('跳转设置失败', e)
+      message.error('无法跳转到系统设置，请手动去手机设置里搜索"通知使用权"')
+    }
+  }
   
   const monthlyBudget = settings?.monthlyBudget || 0
   const budgetAlertEnabled = settings?.budgetAlertEnabled || false
@@ -862,6 +905,41 @@ Excel数据摘要：${JSON.stringify(excelDataSummary, null, 2)}`
                 </Button>
               </Popconfirm>
             </div>
+          </div>
+        </Space>
+      </Card>
+
+      <Card title="自动记账设置" style={{ marginTop: 16 }}>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Row align="middle" justify="space-between">
+            <Col>
+              <Text strong>监听支付通知并自动记账</Text>
+              <br />
+              <Text type="secondary">开启后，应用将在后台读取支付宝、微信的付款通知并自动为您记账</Text>
+            </Col>
+          </Row>
+          <div style={{ marginTop: 12 }}>
+            {notificationGranted === null ? (
+              <Button disabled>检查权限中...</Button>
+            ) : notificationGranted ? (
+              <Space>
+                <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 20 }} />
+                <Text type="success">权限已开启，自动记账生效中</Text>
+                <Button type="link" onClick={handleOpenNotificationSettings}>
+                  前往关闭
+                </Button>
+              </Space>
+            ) : (
+              <Space direction="vertical">
+                <Space>
+                  <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+                  <Text type="danger">未获得通知读取权限</Text>
+                </Space>
+                <Button type="primary" onClick={handleOpenNotificationSettings} icon={<SettingOutlined />}>
+                  去系统设置中开启
+                </Button>
+              </Space>
+            )}
           </div>
         </Space>
       </Card>
