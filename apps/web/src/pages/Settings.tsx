@@ -38,10 +38,16 @@ const Settings: React.FC = () => {
           if (NotificationSettings) {
             const result = await NotificationSettings.checkPermission()
             setNotificationGranted(result.granted)
+          } else {
+            console.error('未找到 NotificationSettings 插件')
+            setNotificationGranted(false)
           }
+        } else {
+          setNotificationGranted(false)
         }
       } catch (e) {
         console.error('检查通知权限失败', e)
+        setNotificationGranted(false)
       }
     }
     checkNotificationPermission()
