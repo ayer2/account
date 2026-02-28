@@ -8,6 +8,7 @@
     "apps/*"
   ],
   "scripts": {
+    "postinstall": "npm run web:build",
     "dev": "npm run dev --workspace=@accounting/web",
     "dev:server": "npm run dev --workspace=@accounting/server",
     "web": "npm run dev --workspace=@accounting/web",
