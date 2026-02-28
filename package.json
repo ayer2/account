@@ -8,8 +8,6 @@
     "apps/*"
   ],
   "scripts": {
-    "build:appflow:android": "npm run web:build && npm run cap:prepare",
-    "cap:prepare": "cd apps/web && npx rimraf android && npx cap add android && npx cap sync android",
     "dev": "npm run dev --workspace=@accounting/web",
     "dev:server": "npm run dev --workspace=@accounting/server",
     "web": "npm run dev --workspace=@accounting/web",

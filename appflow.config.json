@@ -1,8 +1,0 @@
-{
-  "builds": {
-    "android": {
-      "package": "npm",
-      "script": "build:appflow:android"
-    }
-  }
-}
