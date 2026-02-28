@@ -1,0 +1,6 @@
+{
+  "appId": "com.accounting.personal",
+  "appName": "个人记账助手",
+  "webDir": "apps/web/dist",
+  "bundledWebRuntime": false
+}
