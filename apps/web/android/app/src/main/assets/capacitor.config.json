@@ -4,7 +4,7 @@
 	"webDir": "dist",
 	"bundledWebRuntime": false,
 	"server": {
-		"hostname": "120.27.228.132"
+		"cleartext": true
 	},
 	"plugins": {
 		"SplashScreen": {
