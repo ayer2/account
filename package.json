@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "scripts": {
-    "postinstall": "npm run web:build",
+    "postinstall": "npm run web:build && cd apps/web && npx cap add android",
     "dev": "npm run dev --workspace=@accounting/web",
     "dev:server": "npm run dev --workspace=@accounting/server",
     "web": "npm run dev --workspace=@accounting/web",
