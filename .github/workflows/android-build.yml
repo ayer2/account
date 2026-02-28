@@ -1,0 +1,55 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # 允许在 GitHub 网页上手动点击按钮打包
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 拉取代码
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      # 2. 设置 Node 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      # 3. 设置 Java 环境（安卓打包必需）
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      # 4. 全局安装依赖并编译前端代码
+      - name: Install & Build Web
+        run: |
+          npm install
+          npm run web:build
+
+      # 5. 安装 Capacitor 并生成原生代码
+      - name: Build Android
+        working-directory: ./apps/web
+        run: |
+          # 清理可能存在的残留
+          npx rimraf android
+          # 添加安卓平台
+          npx cap add android
+          # 同步前端资源到安卓目录
+          npx cap sync android
+          # 进入安卓目录开始打包
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # 6. 上传生成的 APK 文件供下载
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: personal-accounting-app
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
