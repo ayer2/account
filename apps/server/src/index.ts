@@ -18,8 +18,8 @@ app.use(helmet())
 app.use(compression())
 // 引入跨域中间件，并进行跨域配置
 app.use(cors({
-  // 允许的前端来源，包括环境变量、本地Web、Capacitor环境和移动端
-  origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost', 'capacitor://localhost', 'http://120.27.228.132'],
+  // 允许所有来源跨域（解决 Capacitor 各种奇怪的 Origin 拦截）
+  origin: true,
   // 允许携带凭证（如 Cookie 等）
   credentials: true,
 }))

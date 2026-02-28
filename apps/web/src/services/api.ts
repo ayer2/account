@@ -2,7 +2,8 @@
 import type { Account, Category, Transaction, AppSettings } from '@accounting/shared'
 
 // 获取环境变量中的 API_URL，如果没有则默认使用相对路径 /api，APK 必须使用绝对路径
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+// 直接写死绝对路径，确保 APK 无论如何打包都能向服务器发请求
+const API_BASE_URL = 'http://120.27.228.132/api'
 
 // 定义一个继承自 Error 的自定义 API 错误类
 class ApiError extends Error {
