@@ -1,0 +1,29 @@
+# 阶段一：构建前端产物
+FROM node:22-alpine AS builder
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制所有项目文件
+COPY . .
+
+# 安装所有依赖
+RUN npm install
+
+# 执行前端构建命令
+RUN npm run web:build
+
+# 阶段二：使用 Nginx 提供静态服务
+FROM nginx:alpine
+
+# 将 Nginx 的默认配置替换为我们的配置
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# 将构建好的前端 dist 目录复制到 Nginx 的网页托管目录中
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+
+# 暴露 80 端口
+EXPOSE 80
+
+# 以前台模式启动 Nginx
+CMD ["nginx", "-g", "daemon off;"]

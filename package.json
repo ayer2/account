@@ -1,0 +1,37 @@
+{
+  "name": "personal-accounting",
+  "version": "1.0.0",
+  "private": true,
+  "description": "个人记账助手 - 支持Web端和移动端",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@accounting/web",
+    "dev:server": "npm run dev --workspace=@accounting/server",
+    "web": "npm run dev --workspace=@accounting/web",
+    "web:build": "npm run build --workspace=@accounting/web",
+    "web:preview": "npm run preview --workspace=@accounting/web",
+    "server": "npm run dev --workspace=@accounting/server",
+    "server:build": "npm run build --workspace=@accounting/server",
+    "server:start": "npm run start --workspace=@accounting/server",
+    "db:migrate": "npm run db:migrate --workspace=@accounting/server",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "keywords": [
+    "accounting",
+    "personal-finance",
+    "react",
+    "ant-design"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "mcp-postgres-server": "^0.1.3"
+  }
+}

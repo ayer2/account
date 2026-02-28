@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">个人记账助手</string>
+    <string name="title_activity_main">个人记账助手</string>
+    <string name="package_name">com.accounting.personal</string>
+    <string name="custom_url_scheme">com.accounting.personal</string>
+</resources>

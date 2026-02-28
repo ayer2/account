@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # 数据库服务
+  db:
+    image: postgres:15-alpine
+    container_name: accounting_db
+    restart: always
+    environment:
+      # 数据库用户名
+      POSTGRES_USER: root
+      # 数据库密码
+      POSTGRES_PASSWORD: 123456
+      # 数据库名称
+      POSTGRES_DB: accounting
+    ports:
+      - "5432:5432"
+    volumes:
+      # 将数据库数据持久化到宿主机
+      - pgdata:/var/lib/postgresql/data
+
+  # 后端服务
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: accounting_server
+    restart: always
+    environment:
+      # 对应上方的数据库服务名 db
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      - DB_NAME=accounting
+      - PORT=3000
+      # 前端请求来源白名单配置
+      - FRONTEND_URL=http://120.27.228.132
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+  # 前端服务与反向代理
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: accounting_web
+    restart: always
+    ports:
+      # 将 Nginx 的 80 端口映射到服务器的 80 端口
+      - "80:80"
+    depends_on:
+      - server
+
+# 定义持久化数据卷
+volumes:
+  pgdata:
