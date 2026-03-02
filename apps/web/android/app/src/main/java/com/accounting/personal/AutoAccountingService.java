@@ -8,9 +8,12 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Toast;
 import org.json.JSONObject;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -87,6 +90,7 @@ public class AutoAccountingService extends AccessibilityService {
         if (!isPaySuccess) return;
 
         Log.d(TAG, "检测到支付宝支付成功页面");
+        showToast("[记账] 检测到支付宝支付成功页面");
 
         // 提取金额：在页面所有节点中查找形如 "15.50" 的金额文本
         double amount = extractAmountFromNode(rootNode);
@@ -94,7 +98,10 @@ public class AutoAccountingService extends AccessibilityService {
         String merchant = extractMerchantFromNode(rootNode, "付款给", "收款方", "商家名称");
 
         if (amount > 0) {
+            showToast("[记账] 识别金额: ¥" + amount + " 提交中...");
             submitTransaction(amount, merchant, accountName);
+        } else {
+            showToast("[记账] 未能提取到金额，请检查页面");
         }
     }
 
@@ -107,6 +114,7 @@ public class AutoAccountingService extends AccessibilityService {
         if (!isPaySuccess) return;
 
         Log.d(TAG, "检测到微信支付成功页面");
+        showToast("[记账] 检测到微信支付成功页面");
 
         // 提取金额
         double amount = extractAmountFromNode(rootNode);
@@ -114,7 +122,10 @@ public class AutoAccountingService extends AccessibilityService {
         String merchant = extractMerchantFromNode(rootNode, "收款方", "商家", "付款给");
 
         if (amount > 0) {
+            showToast("[记账] 识别金额: ¥" + amount + " 提交中...");
             submitTransaction(amount, merchant, accountName);
+        } else {
+            showToast("[记账] 未能提取到金额，请检查页面");
         }
     }
 
@@ -232,6 +243,7 @@ public class AutoAccountingService extends AccessibilityService {
 
                 if (token.isEmpty()) {
                     Log.e(TAG, "未找到登录凭证（auth_token），放弃自动记账");
+                    showToast("[记账] 错误：未找到登录凭证，请先退出重新登录");
                     return;
                 }
 
@@ -275,11 +287,21 @@ public class AutoAccountingService extends AccessibilityService {
                 // 记账成功（HTTP 2xx）时发送系统通知
                 if (responseCode >= 200 && responseCode < 300) {
                     sendSuccessNotification(finalAmount, finalAccount);
+                } else {
+                    showToast("[记账] 提交失败，服务器响应码: " + responseCode);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "自动记账请求发送失败", e);
+                showToast("[记账] 网络错误: " + e.getMessage());
             }
         }).start();
+    }
+
+    // 在主线程显示 Toast（服务运行在后台线程，需要切回主线程）
+    private void showToast(final String msg) {
+        new Handler(Looper.getMainLooper()).post(() ->
+                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show()
+        );
     }
 
     @Override
@@ -291,6 +313,7 @@ public class AutoAccountingService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         Log.d(TAG, "无障碍服务已连接，自动记账功能生效");
+        showToast("自动记账服务已启动");
         // 在 XML 配置基础上补充 FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         // 关键：必须用 getServiceInfo() 获取已有配置（含 canRetrieveWindowContent=true），
         //       再修改，而不是创建新对象覆盖，否则 canRetrieveWindowContent 会被重置为 false，

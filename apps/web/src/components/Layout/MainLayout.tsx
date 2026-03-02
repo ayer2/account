@@ -132,7 +132,7 @@ const MainLayout: React.FC = () => {
             style={{ fontSize: 18 }} 
             onClick={() => navigate('/settings')}
           />
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Dropdown menu={{ items: userMenuItems, onClick: handleMenuClick }} placement="bottomRight">
             <Button type="text" icon={<UserOutlined />} style={{ fontSize: 18 }} />
           </Dropdown>
         </div>

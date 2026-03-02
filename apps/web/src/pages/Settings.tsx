@@ -4,9 +4,17 @@ import { Card, Button, Divider, message, Modal, Upload, Space, Typography, Popco
 import { DownloadOutlined, UploadOutlined, DeleteOutlined, SettingOutlined, DollarOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import type { UploadProps } from 'antd'
 import * as XLSX from 'xlsx'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { useDataStore } from '../stores/dataStore'
 import { getDB } from '../db'
 import { api } from '../services/api'
+
+// 使用 registerPlugin 注册自定义插件（Capacitor 4+ 推荐方式，兼容性更好）
+interface NotificationSettingsPluginInterface {
+  openSettings(): Promise<void>
+  checkPermission(): Promise<{ granted: boolean }>
+}
+const NotificationSettingsPlugin = registerPlugin<NotificationSettingsPluginInterface>('NotificationSettings')
 
 const { Text, Paragraph } = Typography
 
@@ -29,50 +37,42 @@ const Settings: React.FC = () => {
   // 原生权限状态
   const [notificationGranted, setNotificationGranted] = useState<boolean | null>(null)
 
-  // 检查原生通知权限
+  // 检查无障碍服务权限状态
   useEffect(() => {
     const checkNotificationPermission = async () => {
       try {
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-          const { NotificationSettings } = window.Capacitor.Plugins
-          if (NotificationSettings) {
-            const result = await NotificationSettings.checkPermission()
-            setNotificationGranted(result.granted)
-          } else {
-            console.error('未找到 NotificationSettings 插件')
-            setNotificationGranted(false)
-          }
+        if (Capacitor.isNativePlatform()) {
+          // 使用 registerPlugin 方式，比 window.Capacitor.Plugins 更可靠
+          const result = await NotificationSettingsPlugin.checkPermission()
+          setNotificationGranted(result.granted)
         } else {
+          // 非原生环境（网页端）不支持此功能
           setNotificationGranted(false)
         }
       } catch (e) {
-        console.error('检查通知权限失败', e)
+        console.error('检查无障碍权限失败', e)
         setNotificationGranted(false)
       }
     }
     checkNotificationPermission()
   }, [])
 
-  // 跳转到系统设置页
+  // 跳转到系统无障碍设置页
   const handleOpenNotificationSettings = async () => {
     try {
-      if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-        const { NotificationSettings } = window.Capacitor.Plugins
-        if (NotificationSettings) {
-          await NotificationSettings.openSettings()
-          // 可以在这里提示用户开启后返回
-          Modal.info({
-            title: '授权引导',
-            content: '请在弹出的"辅助功能"设置页面中，找到【个人记账助手】，打开开关授权即可。授权后返回 App，自动记账立即生效。',
-            okText: '知道了'
-          })
-        }
+      if (Capacitor.isNativePlatform()) {
+        await NotificationSettingsPlugin.openSettings()
+        Modal.info({
+          title: '授权引导',
+          content: '请在弹出的"辅助功能"设置页面中，找到【个人记账助手】，打开开关授权即可。授权后返回 App，自动记账立即生效。',
+          okText: '知道了'
+        })
       } else {
         message.warning('该功能仅在移动端 App 中可用')
       }
     } catch (e) {
       console.error('跳转设置失败', e)
-      message.error('无法跳转到系统设置，请手动去手机设置里搜索"通知使用权"')
+      message.error('无法跳转到系统设置，请手动前往：设置 → 辅助功能 → 已安装应用')
     }
   }
   
