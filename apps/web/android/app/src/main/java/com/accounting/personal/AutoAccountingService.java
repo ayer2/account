@@ -40,6 +40,10 @@ public class AutoAccountingService extends AccessibilityService {
     private long lastSubmitTime = 0;
     private static final long DEBOUNCE_MS = 5000;
 
+    // 调试：记录上次弹 Toast 的时间，避免事件频繁时刷屏（最少间隔 3 秒）
+    private long lastDebugToastTime = 0;
+    private static final long DEBUG_TOAST_INTERVAL = 3000;
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         // 只处理窗口内容变化和窗口状态变化两类事件
@@ -60,9 +64,22 @@ public class AutoAccountingService extends AccessibilityService {
             return;
         }
 
+        // 调试：确认事件已收到（3 秒内只弹一次，避免频繁刷屏）
+        Log.d(TAG, "收到事件 pkg=" + packageName + " type=" + event.getEventType());
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - lastDebugToastTime > DEBUG_TOAST_INTERVAL) {
+            lastDebugToastTime = nowMs;
+            showToast("[调试] 收到" + (isAlipay ? "支付宝" : "微信") + "事件");
+        }
+
         // 获取当前窗口的根节点
         AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-        if (rootNode == null) return;
+        if (rootNode == null) {
+            // 根节点为空说明 canRetrieveWindowContent 未生效或窗口不可读
+            Log.w(TAG, "getRootInActiveWindow() 返回 null，无法读取页面内容");
+            showToast("[记账] 无法读取" + (isAlipay ? "支付宝" : "微信") + "页面内容（null）");
+            return;
+        }
 
         try {
             String accountName = isAlipay ? "支付宝" : "微信";
@@ -83,11 +100,17 @@ public class AutoAccountingService extends AccessibilityService {
 
     // 处理支付宝支付成功识别
     private void handleAlipay(AccessibilityNodeInfo rootNode, String accountName) {
-        // 识别支付宝"付款成功"或"支付成功"页面
+        // 识别支付宝各类成功页面关键词（转账/付款/支付均需覆盖）
         boolean isPaySuccess = containsText(rootNode, "付款成功")
                 || containsText(rootNode, "支付成功")
-                || containsText(rootNode, "付款已完成");
-        if (!isPaySuccess) return;
+                || containsText(rootNode, "付款已完成")
+                || containsText(rootNode, "转账成功")
+                || containsText(rootNode, "转账完成")
+                || containsText(rootNode, "收款成功");
+        if (!isPaySuccess) {
+            Log.d(TAG, "支付宝页面未匹配到成功关键词");
+            return;
+        }
 
         Log.d(TAG, "检测到支付宝支付成功页面");
         showToast("[记账] 检测到支付宝支付成功页面");
@@ -107,11 +130,16 @@ public class AutoAccountingService extends AccessibilityService {
 
     // 处理微信支付成功识别
     private void handleWeChat(AccessibilityNodeInfo rootNode, String accountName) {
-        // 识别微信"支付成功"页面
+        // 识别微信各类成功页面关键词（支付/转账均需覆盖）
         boolean isPaySuccess = containsText(rootNode, "支付成功")
                 || containsText(rootNode, "已支付")
-                || containsText(rootNode, "支付完成");
-        if (!isPaySuccess) return;
+                || containsText(rootNode, "支付完成")
+                || containsText(rootNode, "转账成功")
+                || containsText(rootNode, "已转账");
+        if (!isPaySuccess) {
+            Log.d(TAG, "微信页面未匹配到成功关键词");
+            return;
+        }
 
         Log.d(TAG, "检测到微信支付成功页面");
         showToast("[记账] 检测到微信支付成功页面");
@@ -155,8 +183,9 @@ public class AutoAccountingService extends AccessibilityService {
 
     // 从节点树中提取最大的金额数字（通常支付金额是页面上最显眼的数字）
     private double extractAmountFromNode(AccessibilityNodeInfo rootNode) {
-        // 用正则从所有节点的文本中提取形如 "123.45" 或 "¥123.45" 的金额
-        Pattern pattern = Pattern.compile("[¥￥]?\\s*(\\d+\\.\\d{2})");
+        // 匹配 "123.45"、"¥123.45"、"123"（整数金额）等格式
+        // 支付宝的 ¥ 符号和数字可能分属不同节点，所以 ¥ 是可选的
+        Pattern pattern = Pattern.compile("[¥￥]?\\s*(\\d+(?:\\.\\d{1,2})?)");
         double maxAmount = 0;
         maxAmount = traverseForAmount(rootNode, pattern, maxAmount);
         return maxAmount;
