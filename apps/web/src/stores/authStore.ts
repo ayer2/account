@@ -1,6 +1,24 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { Capacitor } from '@capacitor/core'
+import { Preferences } from '@capacitor/preferences'
 import { api, ApiError } from '../services/api'
+
+// 将 auth_token 同步写入原生 SharedPreferences（Android 原生服务需要读取此处的 token）
+// 在 Android 上同时写入 Capacitor Preferences（对应 SharedPreferences "CapacitorStorage"）
+// 以便 AutoAccountingService.java 可以读取到用户登录凭证
+async function syncTokenToNative(token: string | null) {
+  if (!Capacitor.isNativePlatform()) return  // 仅在原生应用中执行
+  try {
+    if (token) {
+      await Preferences.set({ key: 'auth_token', value: token })
+    } else {
+      await Preferences.remove({ key: 'auth_token' })
+    }
+  } catch {
+    // 同步失败不影响主流程
+  }
+}
 
 interface User {
   id: string
@@ -38,6 +56,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await api.auth.login(email, password)
           const { user, token } = response.data
           localStorage.setItem('auth_token', token)
+          // 同步写入原生 SharedPreferences，供 AutoAccountingService 读取
+          syncTokenToNative(token)
           set({
             user: user as User,
             token,
@@ -63,6 +83,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await api.auth.register(email, password, username)
           const { user, token } = response.data
           localStorage.setItem('auth_token', token)
+          // 同步写入原生 SharedPreferences，供 AutoAccountingService 读取
+          syncTokenToNative(token)
           set({
             user: user as User,
             token,
@@ -78,6 +100,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         localStorage.removeItem('auth_token')
+        // 同步清除原生 SharedPreferences 中的 token
+        syncTokenToNative(null)
         set({
           user: null,
           token: null,

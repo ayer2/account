@@ -2,7 +2,12 @@ package com.accounting.personal;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -22,6 +27,10 @@ public class AutoAccountingService extends AccessibilityService {
     private static final String TAG = "AutoAccounting";
     // 后端接口地址，与前端保持一致
     private static final String API_URL = "http://120.27.228.132/api/transactions/auto";
+    // 通知渠道 ID，用于 Android 8.0+ 的通知分类
+    private static final String CHANNEL_ID = "auto_accounting_channel";
+    // 通知 ID，每次记账成功弹出的通知使用此 ID（会覆盖上一条，不堆积）
+    private static final int NOTIFY_ID = 1001;
 
     // 防重复提交：记录上次提交的金额和时间戳（5秒内同一笔金额不重复提交）
     private double lastAmount = 0;
@@ -262,6 +271,11 @@ public class AutoAccountingService extends AccessibilityService {
                         + " 商家: " + finalMerchant + " 响应码: " + responseCode);
 
                 conn.disconnect();
+
+                // 记账成功（HTTP 2xx）时发送系统通知
+                if (responseCode >= 200 && responseCode < 300) {
+                    sendSuccessNotification(finalAmount, finalAccount);
+                }
             } catch (Exception e) {
                 Log.e(TAG, "自动记账请求发送失败", e);
             }
@@ -277,14 +291,61 @@ public class AutoAccountingService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         Log.d(TAG, "无障碍服务已连接，自动记账功能生效");
-        // 动态配置监听参数，作为 xml 配置的补充
-        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                | AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
-        info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
-        info.notificationTimeout = 100;
-        info.flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
-                | AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
-        setServiceInfo(info);
+        // 在 XML 配置基础上补充 FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        // 关键：必须用 getServiceInfo() 获取已有配置（含 canRetrieveWindowContent=true），
+        //       再修改，而不是创建新对象覆盖，否则 canRetrieveWindowContent 会被重置为 false，
+        //       导致 getRootInActiveWindow() 返回 null，无法读取页面内容
+        AccessibilityServiceInfo info = getServiceInfo();
+        if (info != null) {
+            info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+            setServiceInfo(info);
+        }
+        // 创建通知渠道（Android 8.0+ 必须先创建渠道才能发通知）
+        createNotificationChannel();
+    }
+
+    // 创建通知渠道，仅在 Android 8.0（API 26）及以上需要
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "自动记账通知",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            channel.setDescription("检测到支付成功后，自动记录账单并通知您");
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    // 发送系统通知，告知用户记账成功
+    private void sendSuccessNotification(double amount, String accountName) {
+        try {
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager == null) return;
+
+            // 格式化金额，保留两位小数
+            String amountStr = String.format(Locale.getDefault(), "%.2f", amount);
+
+            Notification.Builder builder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Android 8.0+ 必须指定 channelId
+                builder = new Notification.Builder(this, CHANNEL_ID);
+            } else {
+                builder = new Notification.Builder(this);
+            }
+
+            builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentTitle("自动记账成功")
+                    .setContentText(accountName + " 消费 ¥" + amountStr + " 已自动记录")
+                    .setAutoCancel(true);
+
+            manager.notify(NOTIFY_ID, builder.build());
+            Log.i(TAG, "已发送记账成功通知: " + accountName + " ¥" + amountStr);
+        } catch (Exception e) {
+            Log.e(TAG, "发送通知失败", e);
+        }
     }
 }
