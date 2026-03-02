@@ -63,8 +63,8 @@ const Settings: React.FC = () => {
           // 可以在这里提示用户开启后返回
           Modal.info({
             title: '授权引导',
-            content: '请在弹出的系统设置页面中，找到【个人记账助手】，并打开开关允许读取通知。授权后返回App即可生效。',
-            okText: '好的'
+            content: '请在弹出的"辅助功能"设置页面中，找到【个人记账助手】，打开开关授权即可。授权后返回 App，自动记账立即生效。',
+            okText: '知道了'
           })
         }
       } else {
@@ -919,9 +919,11 @@ Excel数据摘要：${JSON.stringify(excelDataSummary, null, 2)}`
         <Space direction="vertical" style={{ width: '100%' }}>
           <Row align="middle" justify="space-between">
             <Col>
-              <Text strong>监听支付通知并自动记账</Text>
+              <Text strong>自动识别支付宝/微信付款并记账</Text>
               <br />
-              <Text type="secondary">开启后，应用将在后台读取支付宝、微信的付款通知并自动为您记账</Text>
+              <Text type="secondary">
+                需要开启"辅助功能（无障碍服务）"权限。开启后，每次在支付宝或微信完成付款，App 将自动为您记账，无需手动操作。
+              </Text>
             </Col>
           </Row>
           <div style={{ marginTop: 12 }}>
@@ -930,19 +932,22 @@ Excel数据摘要：${JSON.stringify(excelDataSummary, null, 2)}`
             ) : notificationGranted ? (
               <Space>
                 <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 20 }} />
-                <Text type="success">权限已开启，自动记账生效中</Text>
+                <Text type="success">辅助功能已开启，自动记账生效中</Text>
                 <Button type="link" onClick={handleOpenNotificationSettings}>
-                  前往关闭
+                  前往管理
                 </Button>
               </Space>
             ) : (
               <Space direction="vertical">
                 <Space>
                   <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
-                  <Text type="danger">未获得通知读取权限</Text>
+                  <Text type="danger">辅助功能权限未开启</Text>
                 </Space>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  点击下方按钮，在跳转页面中找到【个人记账助手】并开启开关即可。
+                </Text>
                 <Button type="primary" onClick={handleOpenNotificationSettings} icon={<SettingOutlined />}>
-                  去系统设置中开启
+                  去辅助功能设置中开启
                 </Button>
               </Space>
             )}

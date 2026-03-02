@@ -4,4 +4,6 @@
     <string name="title_activity_main">个人记账助手</string>
     <string name="package_name">com.accounting.personal</string>
     <string name="custom_url_scheme">com.accounting.personal</string>
+    <!-- 无障碍服务描述，显示在手机"辅助功能"设置页中 -->
+    <string name="accessibility_service_description">个人记账助手无障碍服务：用于自动识别微信、支付宝的支付成功页面，自动为您完成记账，无需手动操作。所有数据仅在本地处理，不泄露隐私。</string>
 </resources>
