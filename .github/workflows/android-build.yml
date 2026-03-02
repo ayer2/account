@@ -32,20 +32,16 @@ jobs:
           npm install
           npm run web:build
 
-      # 5. 安装 Capacitor 并生成原生代码
+      # 5. 同步资源并生成原生代码
       - name: Build Android
         working-directory: ./apps/web
         run: |
-          # 清理可能存在的残留
-          npx rimraf android
-          # 添加安卓平台
-          npx cap add android
           # 同步前端资源到安卓目录
           npx cap sync android
           # 进入安卓目录开始打包
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew clean assembleDebug
 
       # 6. 上传生成的 APK 文件供下载
       - name: Upload APK

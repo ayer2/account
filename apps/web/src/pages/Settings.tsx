@@ -473,7 +473,7 @@ Excel数据摘要：${JSON.stringify(excelDataSummary, null, 2)}`
           const fullNote = [counterparty, product].filter(Boolean).join(' - ')
           
           const transactionData = {
-            type,
+            type: type as 'expense' | 'income' | 'transfer' | 'refund' | 'lend' | 'borrow',
             amount,
             accountId: account.id,
             toAccountId: null,
@@ -481,7 +481,7 @@ Excel数据摘要：${JSON.stringify(excelDataSummary, null, 2)}`
             date,
             time: time.substring(0, 5),
             note: fullNote,
-            source: 'alipay' as const,
+            source: 'import' as const,
             originalRefundId: null,
           }
           
@@ -530,7 +530,7 @@ Excel数据摘要：${JSON.stringify(excelDataSummary, null, 2)}`
           }
           
           const transactionData = {
-            type,
+            type: type as 'expense' | 'income' | 'transfer' | 'refund' | 'lend' | 'borrow',
             amount,
             accountId: account.id,
             toAccountId: toAccountId || null,
